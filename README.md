@@ -1,1 +1,1 @@
-﻿## Fullstack Coursework â€” Backend
+﻿## Fullstack Coursework Backend
