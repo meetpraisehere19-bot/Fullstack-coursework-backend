@@ -113,8 +113,11 @@ app.put('/api/lessons/:id/spaces', (req, res) => {
 // Checkout endpoint (no real payment) — verify name & phone server-side too
 app.post('/api/checkout', (req, res) => {
   const { name, phone, items } = req.body;
-  const nameValid = /^[A-Za-z .'-]{2,}$/.test(name);
-  const phoneValid = /^[0-9 +()\-]{7,20}$/.test(phone);
+  // Sync validation with the frontend rules:
+  // Name: letters and spaces only, minimum 2 chars
+  // Phone: digits only, 7-20 digits
+  const nameValid = /^[A-Za-z ]{2,}$/.test((name || '').trim());
+  const phoneValid = /^\d{7,20}$/.test((phone || '').replace(/\D/g, ''));
   if (!nameValid || !phoneValid) return res.status(400).json({ message: 'Invalid name or phone' });
   // In a real app you'd create an order. Here return success and echo order id.
   // Generate a random, hard-to-guess order id using Node's crypto API
@@ -138,7 +141,7 @@ app.get('/api/logs/:id', (req, res) => {
 app.get('/images/:name', (req, res) => {
   const name = req.params.name || '';
   const safeName = path.basename(name); // prevent path traversal
-  const imagesDir = path.join(__dirname, 'public', 'images');
+  const imagesDir = path.join(__dirname, '..', 'public', 'images');
   const filePath = path.join(imagesDir, safeName);
 
   fs.stat(filePath, (err, stat) => {
@@ -155,8 +158,9 @@ app.get('/images/:name', (req, res) => {
 //  missing image (should return 404 and JSON body)
 //  http://localhost:3000/images/does-not-exist.png
 
-// Serve other static frontend assets
-app.use(express.static(path.join(__dirname, 'public')));
+// Serve other static frontend assets from the repository-level `public/`
+// (the `public` folder is a sibling of `backend/`, so move up one level)
+app.use(express.static(path.join(__dirname, '..', 'public')));
 
 // open on port 3000
 const PORT = process.env.PORT || 3000;
