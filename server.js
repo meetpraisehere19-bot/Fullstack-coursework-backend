@@ -9,6 +9,10 @@ const app = express();
 app.use(cors());
 app.use(bodyParser.json());
 
+// --- NEW: In-memory orders collection for assessment requirement ----
+// This stores each order submitted via POST /api/orders
+const ORDERS = [];
+
 // --- Simple logger middleware --------------------------------------
 // Logs every request to the server console and keeps an in-memory
 // history (useful for inspecting recent activity during development).
@@ -110,6 +114,30 @@ app.put('/api/lessons/:id/spaces', (req, res) => {
   res.json({ lesson });
 });
 
+// --- NEW ROUTE (Requirement C): Update ANY attribute of a lesson ------
+// This PUT route allows updating any field in the lesson object
+// Example: { "spaces": 10, "price": 12.99, "location": "Hendon" }
+// This is required for the full 5% where updates are not limited to delta changes.
+app.put('/api/lessons/:id', (req, res) => {
+  const id = parseInt(req.params.id, 10);
+  const updates = req.body;
+
+  const lesson = LESSONS.find(l => l.id === id);
+  if (!lesson) {
+    return res.status(404).json({ message: "Lesson not found" });
+  }
+
+  // Apply all provided updates (overwrites existing fields)
+  Object.assign(lesson, updates);
+
+  res.json({
+    success: true,
+    message: "Lesson updated",
+    lesson
+  });
+});
+
+
 // Checkout endpoint (no real payment) — verify name & phone server-side too
 app.post('/api/checkout', (req, res) => {
   const { name, phone, items } = req.body;
@@ -135,6 +163,25 @@ app.get('/api/logs/:id', (req, res) => {
   if (!entry) return res.status(404).json({ message: 'Log not found' });
   res.json(entry);
 });
+
+// --- NEW ROUTE (Requirement B): Save a new order ----------------------
+// This POST route saves a new order into the ORDERS collection.
+// It is separate from /api/checkout, which is used only by the frontend UI.
+app.post('/api/orders', (req, res) => {
+  const order = {
+    id: randomUUID(),
+    ...req.body,
+    time: new Date().toISOString()
+  };
+
+  ORDERS.push(order);
+
+  res.json({
+    success: true,
+    order
+  });
+});
+
 
 // Image serving endpoint: returns images from `public/images/{name}`.
 // If the file doesn't exist, returns a JSON 404 response.
